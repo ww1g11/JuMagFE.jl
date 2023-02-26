@@ -210,3 +210,33 @@ function save_inp(sim::MicroSimFEM, fname::String)
  close(f)
 
 end
+
+
+"""
+    add_exch(sim::AbstractSim, A::NumberOrArrayOrFunction; name="exch")
+
+Add exchange energy to the system.
+"""
+function add_exch(sim::AbstractSim, A::NumberOrArrayOrFunction; name="exch")
+   
+  nxyz = sim.n_nodes
+  Spatial_A = zeros(Float64, sim.n_cells)
+  K_mat = spzeros(3*nxyz, 3*nxyz)
+  
+  field = zeros(Float64, 3*nxyz)
+  energy = zeros(Float64, nxyz)
+
+  exch = ExchangeFEM(Spatial_A , field, energy, K_mat, false, name)
+
+  init_scalar!(Spatial_A , sim.mesh, A)
+  
+  push!(sim.interactions, exch)
+
+  if sim.save_data
+      push!(sim.saver.headers, string("E_",name))
+      push!(sim.saver.units, "J")
+      id = length(sim.interactions)
+      push!(sim.saver.results, o::AbstractSim->sum(o.interactions[id].energy))
+  end
+  return exch
+end
